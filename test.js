@@ -11,12 +11,13 @@ var vid_options = {
     'Accept': 'application/vnd.twitchtv.v3+json'}
 };
 
-console.log("VideoParse");
+//===========Get details of video============//
+console.log("Running...\n");
 
 function videoParse(videoSearchOptions, videoData){
   var req1 = https.request(videoSearchOptions, (res) => {
-  console.log('statusCode: ', res.statusCode);
-  console.log('headers: ', res.headers);
+  //console.log('statusCode: ', res.statusCode);
+  //console.log('headers: ', res.headers);
 
   var responseString = '';
 
@@ -27,22 +28,22 @@ function videoParse(videoSearchOptions, videoData){
   res.on('end', function() {
       //console.log(responseString);
       var responseObject = JSON.parse(responseString);
-      console.log(responseObject);
+      //console.log(responseObject);
       videoData(responseObject);
       //success(responseObject);
     });
 
-}).on('error', (e) => {
-  console.error(e);
-});
-req1.end();
+  }).on('error', (e) => {
+    console.error(e);
+  });
+  req1.end();
 };
 
-console.log("ChatParse");
-function chatParse(){
+//===========Get chat history for 30 second block============//
+function chatParse_30s(chatData){
   https.get(seagull_chat_url, (res) => {
-  console.log('statusCode: ', res.statusCode);
-  console.log('headers: ', res.headers);
+  //console.log('statusCode: ', res.statusCode);
+  //console.log('headers: ', res.headers);
 
   var responseString = '';
 
@@ -53,15 +54,22 @@ function chatParse(){
   res.on('end', function() {
       //console.log(responseString);
       var responseObject = JSON.parse(responseString);
-      console.log(responseObject);
+      chatData(responseObject);
+      //console.log(responseObject);
       //success(responseObject);
     });
 
 }).on('error', (e) => {
-  console.error(e);
-});
+      console.error(e);
+    });
 };
 
 videoParse(vid_options, function(output){
+  console.log("\nVideoParse");
   console.log(output);
 });
+
+chatParse_30s(function(output){
+  console.log("\nchatParse_30s");
+  console.log(output);
+})

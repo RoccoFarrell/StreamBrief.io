@@ -1,0 +1,17 @@
+{
+  "name": "streambrief.io",
+  "version": "1.0.0",
+  "description": "Twitch parser",
+  "main": "server.js",
+  "scripts": {
+    "test": "console.log(\"Hello world\");",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "private": true,
+  "dependencies": {
+    "express": "^4.13.4",
+    "mysql": "^2.10.2"
+  }
+}
