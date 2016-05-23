@@ -28,25 +28,32 @@ db.serialize(function() {
     console.log(row);
   });
 
-  //db.run("CREATE TABLE Stuff (thing TEXT)");
-/*
-  var stmt = db.prepare("INSERT INTO Stuff VALUES (?)");
 
-//Insert random data
-  var rnd;
-  for (var i = 0; i < 10; i++) {
-    rnd = Math.floor(Math.random() * 10000000);
-    stmt.run("Thing #" + rnd);
-  }
-
-  stmt.finalize();
-  */
   db.each("SELECT rowid AS id, * FROM StreamComments", function(err, row) {
     console.log(row);
   });
 });
 
 db.close();
+
+function db_insertComment(commentDetails, callback){
+
+  /*
+  db.serialize(function() {
+
+    var stmt = db.prepare("INSERT INTO StreamComments VALUES (?)");
+    for (var i in commentDetails){
+        stmt.run(commentDetails[i]);
+    }
+    stmt.finalize();
+
+  });
+
+  db.close();
+  */
+  console.log("commentDetails: " + JSON.stringify(commentDetails, null, 2));
+};
+
 
 /*
 db.serialize(function() {
@@ -88,20 +95,46 @@ apiCalls.videoParse(vid_options, function(output){
 });
 */
 var chatSnippet = {};
+
+function processChatSnippet(chatSnippet, results){
+  //console.log("chatSnippet obj: " + JSON.stringify(chatSnippet, null, 2));
+  console.log("chatSnippet: " + JSON.stringify(chatSnippet.data[0], null, 2));
+  var snippetList = {
+    comments: []
+  };
+
+  for (var key in chatSnippet.data){
+    console.log(key);
+    console.log(chatSnippet.data[key].id);
+    var chatAttr = chatSnippet.data[key].attributes;
+    console.log(chatAttr.from + ": " + chatAttr.message + " @: " + chatAttr.timestamp);
+
+    snippetList.comments.push({
+      "ID": chatSnippet.data[key].id,
+      "TIMESTAMP": chatAttr.timestamp,
+      "USERID": chatAttr.from,
+      "COMMENT": chatAttr.message
+    });
+  }
+
+  results(snippetList);
+};
+
 apiCalls.chatParse_30s(seagull_chat_url, function(output){
-  console.log("\nchatParse_30s");
+  //console.log("\nchatParse_30s");
   chatSnippet = output;
-  console.log(output.data[0]);
+  //console.log(output.data[0]);
+  processChatSnippet(chatSnippet);
 });
 
-
-console.log("chatSnippet: " + chatSnippet);
-// Set server port
+db.each("SELECT * FROM StreamComments", function(err, row) {
+    console.log(row);
+});
 
 var server = http.createServer(function (request, response) {
   response.writeHead(200, {"Content-Type": "text/plain"});
-  response.end(JSON.stringify(chatSnippet));
+  response.end(JSON.stringify(chatSnippet, null, 2));
 });
 
-server.listen(4000);
+//server.listen(4000);
 console.log("server running");
