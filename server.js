@@ -34,23 +34,17 @@ db.serialize(function() {
   });
 });
 
-db.close();
-
 function db_insertComment(commentDetails, callback){
 
-  /*
   db.serialize(function() {
 
-    var stmt = db.prepare("INSERT INTO StreamComments VALUES (?)");
-    for (var i in commentDetails){
-        stmt.run(commentDetails[i]);
-    }
+    var stmt = db.prepare("INSERT OR IGNORE INTO StreamComments(ID, TIMESTAMP, USERID, COMMENT) VALUES(?, ?, ?, ?)");
+
+    stmt.run(commentDetails.ID, commentDetails.TIMESTAMP, commentDetails.USERID, commentDetails.COMMENT);
+
     stmt.finalize();
 
   });
-
-  db.close();
-  */
   console.log("commentDetails: " + JSON.stringify(commentDetails, null, 2));
 };
 
@@ -98,16 +92,19 @@ var chatSnippet = {};
 
 function processChatSnippet(chatSnippet, results){
   //console.log("chatSnippet obj: " + JSON.stringify(chatSnippet, null, 2));
-  console.log("chatSnippet: " + JSON.stringify(chatSnippet.data[0], null, 2));
+  //console.log("chatSnippet: " + JSON.stringify(chatSnippet.data[0], null, 2));
   var snippetList = {
     comments: []
   };
 
+  var snippetLength = 0;
+
   for (var key in chatSnippet.data){
-    console.log(key);
-    console.log(chatSnippet.data[key].id);
+    //console.log(key);
+    //console.log(chatSnippet.data[key].id);
+    snippetLength += 1;
     var chatAttr = chatSnippet.data[key].attributes;
-    console.log(chatAttr.from + ": " + chatAttr.message + " @: " + chatAttr.timestamp);
+    //console.log(chatAttr.from + ": " + chatAttr.message + " @: " + chatAttr.timestamp);
 
     snippetList.comments.push({
       "ID": chatSnippet.data[key].id,
@@ -115,21 +112,34 @@ function processChatSnippet(chatSnippet, results){
       "USERID": chatAttr.from,
       "COMMENT": chatAttr.message
     });
+
+    db_insertComment(snippetList.comments[key], function(input){
+      console.log("Inserting into db");
+    });
   }
 
   results(snippetList);
+
+  console.log(snippetLength);
+
 };
 
 apiCalls.chatParse_30s(seagull_chat_url, function(output){
   //console.log("\nchatParse_30s");
   chatSnippet = output;
   //console.log(output.data[0]);
-  processChatSnippet(chatSnippet);
+  processChatSnippet(chatSnippet, function(inputList){
+    //console.log(inputList);
+  });
 });
 
-db.each("SELECT * FROM StreamComments", function(err, row) {
-    console.log(row);
-});
+function db_printStreamComments(){
+  db.serialize(function(){
+    db.each("SELECT * FROM StreamComments", function(err, row) {
+        console.log("DBRow: " + row);
+    });
+  });
+};
 
 var server = http.createServer(function (request, response) {
   response.writeHead(200, {"Content-Type": "text/plain"});
