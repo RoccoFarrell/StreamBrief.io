@@ -16,23 +16,26 @@ var apiCalls = require('./apiCalls.js');
 
 //console.log(exists);
 
-db.serialize(function() {
+function dbSetup(){
+  db.serialize(function() {
+      db.run("CREATE TABLE if not exists StreamComments (ID INT PRIMARY KEY NOT NULL,\
+        TIMESTAMP INT NOT NULL,\
+        USERID INT NOT NULL,\
+        COMMENT TEXT)");
+    /*
+    db.each("SELECT name FROM sqlite_master WHERE type='table'", function(err, row) {
+      console.log(row);
+    });
 
-    db.run("CREATE TABLE if not exists Stuff (thing TEXT)");
-    db.run("CREATE TABLE if not exists StreamComments (ID INT PRIMARY KEY NOT NULL,\
-      TIMESTAMP INT NOT NULL,\
-      USERID INT NOT NULL,\
-      COMMENT TEXT)");
 
-  db.each("SELECT name FROM sqlite_master WHERE type='table'", function(err, row) {
-    console.log(row);
+    db.each("SELECT rowid AS id, * FROM StreamComments", function(err, row) {
+      console.log(row);
+    });
+    */
   });
+}
 
-
-  db.each("SELECT rowid AS id, * FROM StreamComments", function(err, row) {
-    console.log(row);
-  });
-});
+dbSetup();
 
 function db_insertComment(commentDetails, callback){
 
@@ -45,50 +48,8 @@ function db_insertComment(commentDetails, callback){
     stmt.finalize();
 
   });
-  console.log("commentDetails: " + JSON.stringify(commentDetails, null, 2));
+  //console.log("commentDetails: " + JSON.stringify(commentDetails, null, 2));
 };
-
-
-/*
-db.serialize(function() {
-  if(!exists) {
-    db.run("CREATE TABLE Stuff (thing TEXT)");
-  }
-
-  var stmt = db.prepare("INSERT INTO lorem VALUES (?)");
-  for (var i = 0; i < 10; i++) {
-      stmt.run("Ipsum " + i);
-  }
-  stmt.finalize();
-
-  db.each("SELECT rowid AS id, info FROM lorem", function(err, row) {
-      console.log(row.id + ": " + row.info);
-  });
-});
-
-db.close();
-*/
-
-//--------TESTING API CALLS IN SERVER.JS---------//
-
-var seagull_chat_url='https://rechat.twitch.tv/rechat-messages?start=1462806932&video_id=v65469361'
-var seagull_vid_url='api.twitch.tv'
-
-var vid_options = {
-  host: seagull_vid_url,
-  path: '/kraken/videos/v65469361',
-  method: 'GET',
-  headers: {'Client-ID': '57yix1ed0jcmfazsszea1yyfv1xxoyl',
-    'Accept': 'application/vnd.twitchtv.v3+json'}
-};
-
-/*
-apiCalls.videoParse(vid_options, function(output){
-  //console.log("\nVideoParse");
-  //console.log(output);
-});
-*/
-var chatSnippet = {};
 
 function processChatSnippet(chatSnippet, results){
   //console.log("chatSnippet obj: " + JSON.stringify(chatSnippet, null, 2));
@@ -98,6 +59,8 @@ function processChatSnippet(chatSnippet, results){
   };
 
   var snippetLength = 0;
+  var snippet_startTime = 0;
+  var snippet_endTime = 0;
 
   for (var key in chatSnippet.data){
     //console.log(key);
@@ -113,6 +76,9 @@ function processChatSnippet(chatSnippet, results){
       "COMMENT": chatAttr.message
     });
 
+    snippet_startTime = snippetList.comments[0].TIMESTAMP;
+    snippet_endTime = snippetList.comments[snippetLength-1].TIMESTAMP;
+
     db_insertComment(snippetList.comments[key], function(input){
       console.log("Inserting into db");
     });
@@ -120,14 +86,41 @@ function processChatSnippet(chatSnippet, results){
 
   results(snippetList);
 
-  console.log(snippetLength);
+  console.log(snippetLength + " messages from " + snippet_startTime + " to " + snippet_endTime);
 
 };
 
+//===============================================//
+//--------TESTING API CALLS IN SERVER.JS---------//
+//===============================================//
+
+var seagull_chat_url='https://rechat.twitch.tv/rechat-messages?start=1462806932&video_id=v65469361'
+var seagull_vid_url='api.twitch.tv'
+
+var vid_options = {
+  host: seagull_vid_url,
+  path: '/kraken/videos/v65469361',
+  method: 'GET',
+  headers: {'Client-ID': '57yix1ed0jcmfazsszea1yyfv1xxoyl',
+    'Accept': 'application/vnd.twitchtv.v3+json'}
+};
+
+
+apiCalls.videoParse(vid_options, function(output){
+  console.log("\nVideoParse");
+  console.log(output.length);;
+  var startTime = new Date(1462806932000);
+  console.log("start: " + startTime);
+  var endTime = new Date(1462806932000 + (36492000));
+  console.log("end: " + endTime);
+  console.log("end milli: " + endTime.getTime());
+});
+
+var chatSnippet = {};
+
 apiCalls.chatParse_30s(seagull_chat_url, function(output){
-  //console.log("\nchatParse_30s");
+
   chatSnippet = output;
-  //console.log(output.data[0]);
   processChatSnippet(chatSnippet, function(inputList){
     //console.log(inputList);
   });
