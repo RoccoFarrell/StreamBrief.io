@@ -3,7 +3,7 @@ var http = require('http');
 var express = require('express');
 var app = express();
 var path = require('path');
-var mysql      = require('mysql');
+var morgan = require('morgan'); // used to see requests
 
 var fs = require('fs');
 var file = "twitch.db";
@@ -84,7 +84,7 @@ function processChatSnippet(chatSnippet, results){
     });
   }
 
-  results(snippetList);
+  results(snippetList, snippet_startTime, snippet_endTime);
 
   console.log(snippetLength + " messages from " + snippet_startTime + " to " + snippet_endTime);
 
@@ -97,6 +97,8 @@ function processChatSnippet(chatSnippet, results){
 var seagull_chat_url='https://rechat.twitch.tv/rechat-messages?start=1462806932&video_id=v65469361'
 var seagull_vid_url='api.twitch.tv'
 
+var streamvid_id = "v65469361";
+
 var vid_options = {
   host: seagull_vid_url,
   path: '/kraken/videos/v65469361',
@@ -105,39 +107,70 @@ var vid_options = {
     'Accept': 'application/vnd.twitchtv.v3+json'}
 };
 
+var recordedAt;
+var vid_endTime;
 
 apiCalls.videoParse(vid_options, function(output){
   console.log("\nVideoParse");
-  console.log(output.length);;
-  var startTime = new Date(1462806932000);
-  console.log("start: " + startTime);
-  var endTime = new Date(1462806932000 + (36492000));
-  console.log("end: " + endTime);
-  console.log("end milli: " + endTime.getTime());
+  //console.log(output);
+  recordedAt = new Date(output.recorded_at);
+  //console.log("recordedAt:" + recordedAt);
+  //console.log("start milli:" + recordedAt.getTime());
+  endTime = new Date(1462806932000 + (output.length)*1000);
+  //console.log("end: " + endTime);
+  //console.log("end milli: " + endTime.getTime());
 });
 
 var chatSnippet = {};
+var chat_options = {
+  vid_id: streamvid_id,
+  chatParse_startTime: 1462806932
+};
 
-apiCalls.chatParse_30s(seagull_chat_url, function(output){
+var next_startTime;
+var counter = 0;
 
-  chatSnippet = output;
-  processChatSnippet(chatSnippet, function(inputList){
-    //console.log(inputList);
-  });
-});
+
+//WORKING HERE ON DAY END 05-26
+//WHILE LOOP IS NOT THE WAY TO GO DUE TO ASYNC
+while(counter < 10){
+  counter+=1;
+  console.log("making chat #" + counter +" parse call for time" + chat_options.chatParse_startTime);
+  setTimeout(function(){
+    apiCalls.chatParse_30s(chat_options, function(output){
+      chatSnippet = output;
+      processChatSnippet(chatSnippet, function(inputList, snippet_startTime, snippet_endTime){
+        //console.log(inputList);
+        console.log("snippet start in function: " + snippet_startTime)
+        next_startTime = snippet_endTime;
+      });
+    });
+  }, 10000);
+  chat_options.chatParse_startTime = next_startTime;
+
+}
 
 function db_printStreamComments(){
   db.serialize(function(){
     db.each("SELECT * FROM StreamComments", function(err, row) {
-        console.log("DBRow: " + row);
+        console.log("DBrow" + JSON.stringify(row));
     });
   });
 };
 
-var server = http.createServer(function (request, response) {
-  response.writeHead(200, {"Content-Type": "text/plain"});
-  response.end(JSON.stringify(chatSnippet, null, 2));
+db_printStreamComments();
+
+//Set up Display
+app.set('view engine', 'pug');
+app.set('views', __dirname + '/public/views')
+app.use(morgan('dev'));
+app.use(express.static(__dirname + '/public'));
+
+//var jsonOutput = JSON.stringify(chatSnippet, null, 2);
+
+app.get('/', function (req, res) {
+  res.render('index', { title: 'Hey', message: JSON.stringify(chatSnippet, null, 2)});
 });
 
-//server.listen(4000);
+app.listen(4000);
 console.log("server running");

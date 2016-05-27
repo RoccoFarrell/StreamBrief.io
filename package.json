@@ -12,7 +12,10 @@
   "private": true,
   "dependencies": {
     "express": "^4.13.4",
+    "morgan": "^1.7.0",
     "mysql": "^2.10.2",
+    "nodemon": "^1.9.2",
+    "pug": "^2.0.0-alpha8",
     "sqlite": "^2.0.2",
     "sqlite3": "^3.1.4"
   }

@@ -29,8 +29,9 @@ exports.videoParse = function (videoSearchOptions, videoData){
 };
 
 //===========Get chat history for 30 second block============//
-exports.chatParse_30s = function (chatURL, chatData){
+exports.chatParse_30s = function (chat_options, chatData){
   var responseObject = {};
+  var chatURL = "https://rechat.twitch.tv/rechat-messages?start="+chat_options.chatParse_startTime+"&video_id="+chat_options.vid_id;
   https.get(chatURL, (res) => {
   //console.log('statusCode: ', res.statusCode);
   //console.log('headers: ', res.headers);
