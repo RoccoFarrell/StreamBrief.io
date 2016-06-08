@@ -52,6 +52,4 @@ exports.chatParse_30s = function (chat_options, chatData){
 }).on('error', (e) => {
       console.error(e);
     });
-
-
 };

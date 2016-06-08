@@ -51,6 +51,14 @@ function db_insertComment(commentDetails, callback){
   //console.log("commentDetails: " + JSON.stringify(commentDetails, null, 2));
 };
 
+function db_printStreamComments(){
+  db.serialize(function(){
+    db.each("SELECT * FROM StreamComments", function(err, row) {
+        console.log("DBrow" + JSON.stringify(row));
+    });
+  });
+};
+
 function processChatSnippet(chatSnippet, results){
   //console.log("chatSnippet obj: " + JSON.stringify(chatSnippet, null, 2));
   //console.log("chatSnippet: " + JSON.stringify(chatSnippet.data[0], null, 2));
@@ -84,7 +92,8 @@ function processChatSnippet(chatSnippet, results){
     });
   }
 
-  results(snippetList, snippet_startTime, snippet_endTime);
+  var returnObject = [{snippetList}, snippet_startTime, snippet_endTime];
+  results(returnObject);
 
   console.log(snippetLength + " messages from " + snippet_startTime + " to " + snippet_endTime);
 
@@ -127,38 +136,43 @@ var chat_options = {
   chatParse_startTime: 1462806932
 };
 
-var next_startTime;
+//var next_startTime;
 var counter = 0;
 
 
 //WORKING HERE ON DAY END 05-26
 //WHILE LOOP IS NOT THE WAY TO GO DUE TO ASYNC
-while(counter < 10){
-  counter+=1;
-  console.log("making chat #" + counter +" parse call for time" + chat_options.chatParse_startTime);
-  setTimeout(function(){
-    apiCalls.chatParse_30s(chat_options, function(output){
-      chatSnippet = output;
-      processChatSnippet(chatSnippet, function(inputList, snippet_startTime, snippet_endTime){
-        //console.log(inputList);
-        console.log("snippet start in function: " + snippet_startTime)
-        next_startTime = snippet_endTime;
-      });
-    });
-  }, 10000);
-  chat_options.chatParse_startTime = next_startTime;
 
-}
+console.log("making chat #" + counter +" parse call for time " + chat_options.chatParse_startTime);
 
-function db_printStreamComments(){
-  db.serialize(function(){
-    db.each("SELECT * FROM StreamComments", function(err, row) {
-        console.log("DBrow" + JSON.stringify(row));
-    });
-  });
+
+var callPromise = new Promise.resolve(apiCalls.chatParse_30s(chat_options, output));
+
+callPromise.then(function(){
+  console.log(output);
+})
+
+function returnChatSnippet(chatSnippet, calc_next_startTime){
+  console.log(inputList);
+  console.log("snippet start in function: " + snippet_startTime)
 };
 
-db_printStreamComments();
+function calc_next_startTime(next_startTime){
+  console.log(next_startTime);
+};
+
+
+/*
+processChatSnippet(chatSnippet, function(inputList, snippet_startTime, snippet_endTime){
+  console.log(inputList);
+  console.log("snippet start in function: " + snippet_startTime)
+  next_startTime = snippet_endTime;
+});
+*/
+
+//chat_options.chatParse_startTime = next_startTime;
+
+//END LOOP
 
 //Set up Display
 app.set('view engine', 'pug');
@@ -172,5 +186,5 @@ app.get('/', function (req, res) {
   res.render('index', { title: 'Hey', message: JSON.stringify(chatSnippet, null, 2)});
 });
 
-app.listen(4000);
+//app.listen(4000);
 console.log("server running");
